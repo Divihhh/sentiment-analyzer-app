@@ -3,7 +3,7 @@ import pandas as pd
 from transformers import pipeline
 import matplotlib.pyplot as plt  
 
-# Load Hugging Face sentiment analysis model @st.cache_resource 
+# Load Hugging Face sentiment analysis model
 def load_model(): 
     return pipeline("sentiment-analysis") 
 
