@@ -138,33 +138,47 @@ if uploaded_file is not None:
 
 
 
-            # Pie Charts
+# Plotting sentiment and emotion distributions using Plotly
 
-            st.subheader("Sentiment Distribution")
+def plot_results(df):
 
-            sentiment_counts = df['Sentiment'].value_counts().reset_index()
+    # Check sentiment column content before plotting
 
-            sentiment_chart = px.pie(sentiment_counts, names='index', values='Sentiment',
+    sentiment_counts = df['sentiment'].value_counts()
 
-                                     color_discrete_sequence=px.colors.sequential.RdBu,
+    if sentiment_counts.empty:
 
-                                     title="Sentiment Pie Chart")
+        st.warning("No sentiment data available for plotting.")
 
-            st.plotly_chart(sentiment_chart)
+        return
 
 
 
-            st.subheader("Emotion Distribution")
+    # Plot sentiment distribution
 
-            emotion_counts = df['Emotion'].value_counts().reset_index()
+    sentiment_fig = px.pie(values=sentiment_counts.values, names=sentiment_counts.index, title="Sentiment Distribution")
 
-            emotion_chart = px.pie(emotion_counts, names='index', values='Emotion',
 
-                                   color_discrete_sequence=px.colors.sequential.Viridis,
 
-                                   title="Emotion Pie Chart")
+    # Plot emotion distribution
 
-            st.plotly_chart(emotion_chart)
+    emotion_counts = df['emotion'].value_counts()
+
+    if emotion_counts.empty:
+
+        st.warning("No emotion data available for plotting.")
+
+        return
+
+    emotion_fig = px.pie(values=emotion_counts.values, names=emotion_counts.index, title="Emotion Distribution")
+
+
+
+    # Show the plots
+
+    st.plotly_chart(sentiment_fig)
+
+    st.plotly_chart(emotion_fig)
 
 
 
