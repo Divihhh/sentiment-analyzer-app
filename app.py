@@ -1,22 +1,18 @@
 import pandas as pd
-
 import streamlit as st
-
 from transformers import pipeline
-
 import plotly.express as px
-
 # Function to handle the file upload and CSV reading
 
 def handle_csv_upload(uploaded_file):
 
     try:
 
-        # Read the CSV file
+        # Read the CSV file (skip index column if necessary)
 
-        df = pd.read_csv(uploaded_file)
+        df = pd.read_csv(uploaded_file, index_col=0)
 
-        
+
 
         # Check if 'review' column exists in the dataframe
 
@@ -25,8 +21,6 @@ def handle_csv_upload(uploaded_file):
             st.error("CSV must contain a 'review' column.")
 
             return None
-
-        
 
         # Check for empty reviews in the 'review' column and remove those rows
 
@@ -44,6 +38,8 @@ def handle_csv_upload(uploaded_file):
 
         return df
 
+    
+
     except pd.errors.ParserError as e:
 
         st.error(f"Error reading the CSV file: {e}")
@@ -52,7 +48,12 @@ def handle_csv_upload(uploaded_file):
 
         st.error(f"Unexpected error: {e}")
 
+
+
 # Load Hugging Face models for sentiment and emotion analysis
+
+@st.cache_resource
+
 def load_models():
 
     sentiment_analyzer = pipeline("sentiment-analysis")
@@ -61,7 +62,10 @@ def load_models():
 
     return sentiment_analyzer, emotion_analyzer
 
+
+
 # Function to analyze sentiment and emotion of each review
+
 def analyze_reviews(df, sentiment_analyzer, emotion_analyzer):
 
     # Initialize result lists
@@ -111,6 +115,14 @@ def analyze_reviews(df, sentiment_analyzer, emotion_analyzer):
 # Plotting sentiment and emotion distributions using Plotly
 
 def plot_results(df):
+
+    # Debugging: Check the sentiment column before plotting
+
+    st.write("Sentiment values before plotting:")
+
+    st.write(df['sentiment'].value_counts())  # Display sentiment counts
+
+
 
     # Plot sentiment distribution
 
