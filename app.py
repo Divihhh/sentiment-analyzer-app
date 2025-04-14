@@ -8,6 +8,22 @@ import plotly.express as px
 
 
 
+# Set up the title and description of the project
+
+st.title("Product Review Sentiment & Emotion Analysis")
+
+st.markdown("""
+
+This project performs **Sentiment Analysis** and **Emotion Classification** on product reviews. 
+
+The app uses Hugging Face models to classify sentiment (positive/negative) and emotions (such as joy, anger, sadness, etc.).
+
+You can upload a CSV file containing product reviews and download the results with sentiment and emotion labels.
+
+""")
+
+
+
 # Function to handle the file upload and CSV reading
 
 def handle_csv_upload(uploaded_file):
