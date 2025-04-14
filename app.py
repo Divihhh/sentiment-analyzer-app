@@ -6,6 +6,8 @@ from transformers import pipeline
 
 import plotly.express as px
 
+import time
+
 
 
 # Set up the title and description of the project
@@ -18,7 +20,7 @@ This project performs **Sentiment Analysis** and **Emotion Classification** on p
 
 The app uses Hugging Face models to classify sentiment (positive/negative) and emotions (such as joy, anger, sadness, etc.).
 
-You can upload a CSV file containing product reviews and download the results with sentiment and emotion labels.
+You can upload a CSV file containing product reviews, input a single review, and download the results with sentiment and emotion labels.
 
 """)
 
@@ -106,9 +108,15 @@ def analyze_reviews(df, sentiment_analyzer, emotion_analyzer):
 
 
 
+    # Create a progress bar
+
+    progress_bar = st.progress(0)
+
+
+
     # Process each review in the dataframe
 
-    for review in df['review']:
+    for idx, review in enumerate(df['review']):
 
         # Sentiment analysis
 
@@ -124,7 +132,13 @@ def analyze_reviews(df, sentiment_analyzer, emotion_analyzer):
 
         emotions.append(emotion_result['labels'][0])
 
-    
+
+
+        # Update progress bar
+
+        progress_bar.progress((idx + 1) / len(df))
+
+
 
     # Add sentiment and emotion columns to the dataframe
 
@@ -180,6 +194,14 @@ def plot_results(df):
 
 
 
+# Input box for single review analysis
+
+st.subheader("Or analyze a single review")
+
+single_review = st.text_area("Enter a single product review for analysis:")
+
+
+
 # Streamlit file uploader widget
 
 uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
@@ -192,6 +214,38 @@ sentiment_analyzer, emotion_analyzer = load_models()
 
 
 
+# Analyze single review if provided
+
+if single_review:
+
+    if len(single_review.strip()) > 0:
+
+        # Perform sentiment and emotion analysis for the single review
+
+        st.write(f"Analyzing the review: {single_review}")
+
+        
+
+        sentiment_result = sentiment_analyzer(single_review)[0]
+
+        emotion_result = emotion_analyzer(single_review, candidate_labels=["joy", "anger", "fear", "sadness", "surprise", "disgust"])
+
+        
+
+        # Display the result for single review
+
+        st.write(f"Sentiment: {sentiment_result['label']}")
+
+        st.write(f"Dominant Emotion: {emotion_result['labels'][0]}")
+
+    else:
+
+        st.warning("Please enter a review for analysis.")
+
+
+
+# If CSV file is uploaded, handle and process the file
+
 if uploaded_file is not None:
 
     # Process the uploaded file
@@ -203,6 +257,8 @@ if uploaded_file is not None:
     if df is not None:
 
         # Perform sentiment and emotion analysis
+
+        st.write("Performing sentiment and emotion analysis...")
 
         df = analyze_reviews(df, sentiment_analyzer, emotion_analyzer)
 
@@ -231,7 +287,6 @@ if uploaded_file is not None:
             mime='text/csv'
 
         )
-
 
 
         # Display the pie charts for sentiment and emotion distribution
