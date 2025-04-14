@@ -1,295 +1,163 @@
-import pandas as pd
-
 import streamlit as st
+
+import pandas as pd
 
 from transformers import pipeline
 
 import plotly.express as px
 
-import time
 
 
+# Title and description
 
-# Set up the title and description of the project
+st.set_page_config(page_title="Review Sentiment & Emotion Analysis", layout="centered")
 
 st.title("Product Review Sentiment & Emotion Analysis")
 
 st.markdown("""
 
-This project performs **Sentiment Analysis** and **Emotion Classification** on product reviews. 
+Analyze **sentiment** (positive/negative) and **emotions** (joy, anger, fear, etc.) in product reviews.
 
-The app uses Hugging Face models to classify sentiment (positive/negative) and emotions (such as joy, anger, sadness, etc.).
-
-You can upload a CSV file containing product reviews, input a single review, and download the results with sentiment and emotion labels.
+You can either input a single review or upload a CSV file with multiple reviews (with a column named `review`).
 
 """)
 
 
 
-# Function to handle the file upload and CSV reading
-
-def handle_csv_upload(uploaded_file):
-
-    try:
-
-        # Read the CSV file (skip index column if necessary)
-
-        df = pd.read_csv(uploaded_file)
-
-
-
-        # Check if 'review' column exists in the dataframe
-
-        if 'review' not in df.columns:
-
-            st.error("CSV must contain a 'review' column.")
-
-            return None
-
-        
-
-        # Check for empty reviews in the 'review' column and remove those rows
-
-        df = df[df['review'].notna()]  # Drop rows where 'review' is NaN
-
-
-
-        # Display a success message and preview the first few rows of the file
-
-        st.success("CSV uploaded and read successfully!")
-
-        st.write(df.head())  # Show preview of the data for user to confirm
-
-        
-
-        return df
-
-    
-
-    except pd.errors.ParserError as e:
-
-        st.error(f"Error reading the CSV file: {e}")
-
-    except Exception as e:
-
-        st.error(f"Unexpected error: {e}")
-
-
-
-# Load Hugging Face models for sentiment and emotion analysis
+# Load Hugging Face models
 
 @st.cache_resource
 
 def load_models():
 
-    sentiment_analyzer = pipeline("sentiment-analysis")
+    sentiment_model = pipeline("sentiment-analysis")
 
-    emotion_analyzer = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+    emotion_model = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
 
-    return sentiment_analyzer, emotion_analyzer
+    return sentiment_model, emotion_model
 
 
 
-# Function to analyze sentiment and emotion of each review
+sentiment_model, emotion_model = load_models()
 
-def analyze_reviews(df, sentiment_analyzer, emotion_analyzer):
+emotion_labels = ["joy", "anger", "fear", "sadness", "surprise", "disgust"]
 
-    # Initialize result lists
 
-    sentiments = []
 
-    emotions = []
+# --- SINGLE REVIEW ANALYSIS ---
+
+st.header("1. Analyze a Single Review")
+
+single_review = st.text_area("Enter your product review here:")
+
+
+
+if single_review.strip():
+
+    with st.spinner("Analyzing..."):
+
+        sentiment = sentiment_model(single_review)[0]['label']
+
+        emotion = emotion_model(single_review, candidate_labels=emotion_labels)['labels'][0]
 
     
 
-    # Define possible emotions for classification
+    st.success("Analysis Complete!")
 
-    possible_emotions = ["joy", "anger", "fear", "sadness", "surprise", "disgust"]
+    st.write(f"**Sentiment:** {sentiment}")
 
+    st.write(f"**Dominant Emotion:** {emotion}")
 
 
-    # Create a progress bar
 
-    progress_bar = st.progress(0)
+# --- MULTIPLE REVIEWS VIA CSV ---
 
+st.header("2. Analyze Multiple Reviews from CSV")
 
+uploaded_file = st.file_uploader("Upload a CSV file with a column named 'review'", type=['csv'])
 
-    # Process each review in the dataframe
 
-    for idx, review in enumerate(df['review']):
 
-        # Sentiment analysis
+if uploaded_file:
 
-        sentiment_result = sentiment_analyzer(review)[0]
+    try:
 
-        sentiments.append(sentiment_result['label'])
+        df = pd.read_csv(uploaded_file)
 
-        
 
-        # Emotion analysis
 
-        emotion_result = emotion_analyzer(review, candidate_labels=possible_emotions)
+        if 'review' not in df.columns:
 
-        emotions.append(emotion_result['labels'][0])
+            st.error("The CSV file must contain a column named 'review'.")
 
+        else:
 
+            df = df[df['review'].notna()].reset_index(drop=True)
 
-        # Update progress bar
+            st.write("Preview of uploaded reviews:")
 
-        progress_bar.progress((idx + 1) / len(df))
+            st.write(df.head())
 
 
 
-    # Add sentiment and emotion columns to the dataframe
+            st.info("Performing sentiment and emotion analysis...")
 
-    df['sentiment'] = sentiments
+            progress = st.progress(0)
 
-    df['emotion'] = emotions
+            sentiment_list, emotion_list = [], []
 
-    return df
 
 
+            for i, review in enumerate(df['review']):
 
-# Plotting sentiment and emotion distributions using Plotly
+                sentiment = sentiment_model(review)[0]['label']
 
-def plot_results(df):
+                emotion = emotion_model(review, candidate_labels=emotion_labels)['labels'][0]
 
-    # Check sentiment column content before plotting
+                sentiment_list.append(sentiment)
 
-    sentiment_counts = df['sentiment'].value_counts()
+                emotion_list.append(emotion)
 
-    if sentiment_counts.empty:
+                progress.progress((i + 1) / len(df))
 
-        st.warning("No sentiment data available for plotting.")
 
-        return
 
+            df['Sentiment'] = sentiment_list
 
+            df['Emotion'] = emotion_list
 
-    # Plot sentiment distribution
+            st.success("Analysis complete!")
 
-    sentiment_fig = px.pie(values=sentiment_counts.values, names=sentiment_counts.index, title="Sentiment Distribution")
 
 
+            st.write("Preview of results:")
 
-    # Plot emotion distribution
+            st.write(df.head())
 
-    emotion_counts = df['emotion'].value_counts()
 
-    if emotion_counts.empty:
 
-        st.warning("No emotion data available for plotting.")
+            # Download button
 
-        return
+            csv = df.to_csv(index=False).encode('utf-8')
 
-    emotion_fig = px.pie(values=emotion_counts.values, names=emotion_counts.index, title="Emotion Distribution")
+            st.download_button("Download Results as CSV", csv, "sentiment_emotion_results.csv", "text/csv")
 
 
 
-    # Show the plots
+            # Visualization
 
-    st.plotly_chart(sentiment_fig)
+            st.subheader("Sentiment & Emotion Distribution")
 
-    st.plotly_chart(emotion_fig)
+            sentiment_fig = px.pie(df, names='Sentiment', title="Sentiment Distribution")
 
+            emotion_fig = px.pie(df, names='Emotion', title="Emotion Distribution")
 
+            st.plotly_chart(sentiment_fig)
 
-# Input box for single review analysis
+            st.plotly_chart(emotion_fig)
 
-st.subheader("Or analyze a single review")
 
-single_review = st.text_area("Enter a single product review for analysis:")
 
+    except Exception as e:
 
-
-# Streamlit file uploader widget
-
-uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
-
-
-
-# Load models on app startup
-
-sentiment_analyzer, emotion_analyzer = load_models()
-
-
-
-# Analyze single review if provided
-
-if single_review:
-
-    if len(single_review.strip()) > 0:
-
-        # Perform sentiment and emotion analysis for the single review
-
-        st.write(f"Analyzing the review: {single_review}")
-
-        
-
-        sentiment_result = sentiment_analyzer(single_review)[0]
-
-        emotion_result = emotion_analyzer(single_review, candidate_labels=["joy", "anger", "fear", "sadness", "surprise", "disgust"])
-
-        
-
-        # Display the result for single review
-
-        st.write(f"Sentiment: {sentiment_result['label']}")
-
-        st.write(f"Dominant Emotion: {emotion_result['labels'][0]}")
-
-    else:
-
-        st.warning("Please enter a review for analysis.")
-
-
-
-# If CSV file is uploaded, handle and process the file
-
-if uploaded_file is not None:
-
-    # Process the uploaded file
-
-    df = handle_csv_upload(uploaded_file)
-
-
-
-    if df is not None:
-
-        # Perform sentiment and emotion analysis
-
-        st.write("Performing sentiment and emotion analysis...")
-
-        df = analyze_reviews(df, sentiment_analyzer, emotion_analyzer)
-
-
-
-        # Show a preview of the dataframe with sentiment and emotion
-
-        st.write("Preview of the data with sentiment and emotion analysis:")
-
-        st.write(df.head())
-
-
-
-        # Optionally, allow users to download the results as a new CSV file
-
-        csv = df.to_csv(index=False).encode('utf-8')
-
-        st.download_button(
-
-            label="Download Results as CSV",
-
-            data=csv,
-
-            file_name='product_reviews_with_analysis.csv',
-
-            mime='text/csv'
-
-        )
-
-
-
-        # Display the pie charts for sentiment and emotion distribution
-
-        plot_results(df)
+        st.error(f"Error reading the file: {e}")
