@@ -14,11 +14,11 @@ def handle_csv_upload(uploaded_file):
 
     try:
 
-        # Read the CSV file (skip index column if necessary)
+        # Read the CSV file
 
         df = pd.read_csv(uploaded_file)
 
-
+        
 
         # Check if 'review' column exists in the dataframe
 
@@ -124,37 +124,21 @@ def analyze_reviews(df, sentiment_analyzer, emotion_analyzer):
 
 def plot_results(df):
 
-    # Check sentiment column content before plotting
+    # Plot sentiment distribution
 
     sentiment_counts = df['sentiment'].value_counts()
 
-    if sentiment_counts.empty:
-
-        st.warning("No sentiment data available for plotting.")
-
-        return
-
-
-
-    # Plot sentiment distribution
-
     sentiment_fig = px.pie(values=sentiment_counts.values, names=sentiment_counts.index, title="Sentiment Distribution")
 
-
+    
 
     # Plot emotion distribution
 
     emotion_counts = df['emotion'].value_counts()
 
-    if emotion_counts.empty:
-
-        st.warning("No emotion data available for plotting.")
-
-        return
-
     emotion_fig = px.pie(values=emotion_counts.values, names=emotion_counts.index, title="Emotion Distribution")
 
-
+    
 
     # Show the plots
 
@@ -193,8 +177,6 @@ if uploaded_file is not None:
 
 
         # Show a preview of the dataframe with sentiment and emotion
-
-        st.write("Preview of the data with sentiment and emotion analysis:")
 
         st.write(df.head())
 
