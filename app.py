@@ -1,7 +1,13 @@
 import pandas as pd
+
 import streamlit as st
+
 from transformers import pipeline
+
 import plotly.express as px
+
+
+
 # Function to handle the file upload and CSV reading
 
 def handle_csv_upload(uploaded_file):
@@ -10,7 +16,7 @@ def handle_csv_upload(uploaded_file):
 
         # Read the CSV file (skip index column if necessary)
 
-        df = pd.read_csv(uploaded_file, index_col=0)
+        df = pd.read_csv(uploaded_file)
 
 
 
@@ -21,6 +27,8 @@ def handle_csv_upload(uploaded_file):
             st.error("CSV must contain a 'review' column.")
 
             return None
+
+        
 
         # Check for empty reviews in the 'review' column and remove those rows
 
@@ -116,29 +124,37 @@ def analyze_reviews(df, sentiment_analyzer, emotion_analyzer):
 
 def plot_results(df):
 
-    # Debugging: Check the sentiment column before plotting
+    # Check sentiment column content before plotting
 
-    st.write("Sentiment values before plotting:")
+    sentiment_counts = df['sentiment'].value_counts()
 
-    st.write(df['sentiment'].value_counts())  # Display sentiment counts
+    if sentiment_counts.empty:
+
+        st.warning("No sentiment data available for plotting.")
+
+        return
 
 
 
     # Plot sentiment distribution
 
-    sentiment_counts = df['sentiment'].value_counts()
-
     sentiment_fig = px.pie(values=sentiment_counts.values, names=sentiment_counts.index, title="Sentiment Distribution")
 
-    
+
 
     # Plot emotion distribution
 
     emotion_counts = df['emotion'].value_counts()
 
+    if emotion_counts.empty:
+
+        st.warning("No emotion data available for plotting.")
+
+        return
+
     emotion_fig = px.pie(values=emotion_counts.values, names=emotion_counts.index, title="Emotion Distribution")
 
-    
+
 
     # Show the plots
 
@@ -178,6 +194,8 @@ if uploaded_file is not None:
 
         # Show a preview of the dataframe with sentiment and emotion
 
+        st.write("Preview of the data with sentiment and emotion analysis:")
+
         st.write(df.head())
 
 
@@ -197,6 +215,9 @@ if uploaded_file is not None:
             mime='text/csv'
 
         )
+
+
+
         # Display the pie charts for sentiment and emotion distribution
 
         plot_results(df)
